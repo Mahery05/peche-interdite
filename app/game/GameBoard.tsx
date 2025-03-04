@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import socket from "../../lib/socket";
 
-
-
 type Player = {
     id: string;
     username: string;
@@ -22,6 +20,7 @@ export default function GameBoard() {
     const [fish, setFish] = useState<Fish[]>([]);
     const [timer, setTimer] = useState<number>(120);
     const [username, setUsername] = useState<string>("");
+    const [roomId, setRoomId] = useState<string>("room1");
     const [isPlaying, setIsPlaying] = useState(false);
 
     useEffect(() => {
@@ -41,7 +40,7 @@ export default function GameBoard() {
             setIsPlaying(false);
             alert(
                 "Fin de la partie! Scores: " +
-                    players.map((p: Player) => `${p.username}: ${p.score}`).join(", ")
+                players.map((p: Player) => `${p.username}: ${p.score}`).join(", ")
             );
         });
 
@@ -54,14 +53,16 @@ export default function GameBoard() {
     }, []);
 
     const joinGame = () => {
-        if (username) socket.emit("joinGame", username);
+        if (username) {
+            socket.emit("joinRoom", roomId, username);
+        }
     };
 
     const catchFish = (fishId: string, danger: boolean) => {
         if (danger) {
-            alert("Oh non! Un monstre marin ! -10 secondes");
+            alert("Oh non! Un monstre marin !");
         } else {
-            socket.emit("catchFish", fishId);
+            socket.emit("catchFish", roomId, fishId);
         }
     };
 
@@ -69,41 +70,19 @@ export default function GameBoard() {
         <div>
             {!isPlaying ? (
                 <div>
-                    <input
-                        type="text"
-                        placeholder="Votre pseudo"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                    />
+                    <input type="text" placeholder="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)} />
+                    <input type="text" placeholder="Pseudo" value={username} onChange={(e) => setUsername(e.target.value)} />
                     <button onClick={joinGame}>Rejoindre la partie</button>
-                    <p>En attente d&apos;autres joueurs...</p>
-                    <ul>
-                        {players.map((p) => (
-                            <li key={p.id}>{p.username}</li>
-                        ))}
-                    </ul>
                 </div>
             ) : (
                 <div>
-                    <p>Temps restant : {timer}s</p>
-                    <ul>
-                        {players.map((p) => (
-                            <li key={p.id}>
-                                {p.username}: {p.score} poissons
-                            </li>
-                        ))}
-                    </ul>
-                    <div>
-                        {fish.map((f) => (
-                            <button
-                                key={f.id}
-                                onClick={() => catchFish(f.id, f.danger)}
-                                style={{ backgroundColor: f.danger ? "red" : "blue" }}
-                            >
-                                {f.name}
-                            </button>
-                        ))}
-                    </div>
+                    <p>Temps: {timer}s</p>
+                    {players.map(p => <p key={p.id}>{p.username}: {p.score}</p>)}
+                    {fish.map(f => (
+                        <button key={f.id} onClick={() => catchFish(f.id, f.danger)}>
+                            {f.name}
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
