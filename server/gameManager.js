@@ -11,16 +11,29 @@ function createRoom(roomId) {
     };
 }
 
-function generateFish() {
-    return Array.from({ length: 5 }, () => ({
-        id: Math.random().toString(36).substring(2, 9),
-        name: "Poisson rare",
-        danger: Math.random() < 0.2, 
-        x: Math.random() * 750 + 25, 
-        y: Math.random() * 550 + 25, 
-        speed: Math.random() * 0.5 + 0.2 
-    }));
+function generateFish(count = 5) {
+    const fishTypes = [
+        { type: "common", points: 1, name: "Poisson Commun" },
+        { type: "rare", points: 2, name: "Poisson Rare" },
+        { type: "epic", points: 4, name: "Poisson Épique" },
+        { type: "danger", points: -2, name: "Poisson Dangereux" }
+    ];
+
+    return Array.from({ length: count }, () => {
+        const selectedType = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+        return {
+            id: Math.random().toString(36).substring(2, 9),
+            name: selectedType.name,
+            type: selectedType.type,
+            points: selectedType.points,
+            x: Math.random() * 750 + 25,
+            y: Math.random() * 550 + 25,
+            speed: Math.random() * 0.5 + 0.2
+        };
+    });
 }
+
+
 
 
 function startGame(io, roomId) {
@@ -28,7 +41,13 @@ function startGame(io, roomId) {
     room.timer = 120;
 
     if (room.fish.length === 0) { 
-        room.fish = generateFish(); 
+        if (!Array.isArray(room.fish)) {
+            room.fish = []; 
+        }
+        
+        if (room.fish.length === 0) { 
+            room.fish = generateFish(5);
+        }        
     }
 
     io.to(roomId).emit("startGame", {
@@ -54,7 +73,7 @@ function startGame(io, roomId) {
 
             io.to(roomId).emit("updateGame", {
                 timer: room.timer,
-                fish: [...room.fish],
+                fish: Array.isArray(room.fish) ? [...room.fish] : [],
                 players: room.players,
             });
         }
@@ -96,13 +115,7 @@ function handleSockets(io) {
         
                 console.log(`🎣 Joueur ${player.id} a attrapé ${fish.name} (Danger: ${fish.danger})`);
         
-                if (fish.danger) {
-                    player.score = Math.max(0, player.score - 2);
-                    console.log(`❌ Joueur ${player.id} a perdu 2 points. Score: ${player.score}`);
-                } else {
-                    player.score += 1;
-                    console.log(`✔️ Joueur ${player.id} a gagné 1 point. Score: ${player.score}`);
-                }
+                player.score = Math.max(0, player.score + fish.points); 
         
                 room.fish.splice(fishIndex, 1);
         
