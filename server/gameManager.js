@@ -16,8 +16,12 @@ function generateFish() {
         id: Math.random().toString(36).substring(2, 9),
         name: "Poisson rare",
         danger: Math.random() < 0.2, 
+        x: Math.random() * 750 + 25, 
+        y: Math.random() * 550 + 25, 
+        speed: Math.random() * 0.5 + 0.2 
     }));
 }
+
 
 function startGame(io, roomId) {
     const room = rooms[roomId];
@@ -106,7 +110,7 @@ function handleSockets(io) {
                     timer: room.timer,
                     fish: room.fish,
                     players: room.players,
-                });
+                });                
             } else {
                 console.log("⚠️ Erreur: Poisson introuvable ou joueur non reconnu.");
             }

@@ -36,12 +36,7 @@ export default function GameBoard() {
         });
         socket.on("startGame", ({ timer, fish, players }) => {
             setTimer(timer);
-            setFish(fish.map(f => ({ 
-                ...f, 
-                x: Math.random() * 750 + 25, 
-                y: Math.random() * 550 + 25, 
-                speed: Math.random() * 0.5 + 0.2 
-            })));
+            setFish(fish);
             setPlayers(players);
             setIsPlaying(true);
         });
@@ -49,14 +44,7 @@ export default function GameBoard() {
         socket.on("updateGame", ({ timer, fish, players }) => {
         setTimer(timer);
         
-        setFish(prevFish => {
-            const fishMap = new Map(prevFish.map(f => [f.id, f])); 
-
-            fish.forEach(f => fishMap.set(f.id, f));
-
-            return prevFish.filter(f => fish.some(updatedFish => updatedFish.id === f.id));
-        });
-        
+        setFish(prevFish => prevFish.filter(f => fish.some(updatedFish => updatedFish.id === f.id)));        
 
         setPlayers(players);
     });
@@ -80,12 +68,7 @@ export default function GameBoard() {
     useEffect(() => {
         socket.on("newFish", (fish) => {
             console.log("🐟 Nouveau poisson reçu:", fish);
-    
-            setFish(prevFish => {
-                const updatedFishList = [...prevFish, fish];
-                console.log("📌 Liste mise à jour des poissons (après newFish):", updatedFishList);
-                return updatedFishList;
-            });
+            setFish(prevFish => [...prevFish, fish]);
         });
     
         return () => {
@@ -100,10 +83,8 @@ export default function GameBoard() {
     };
 
     const catchFish = (fishId: string, danger: boolean) => {
+        setFish(prevFish => prevFish.filter(f => f.id !== fishId));
         socket.emit("catchFish", roomId, fishId);
-        if (danger) {
-            alert("Oh non! Un monstre marin !");
-        }
     };
     
 
