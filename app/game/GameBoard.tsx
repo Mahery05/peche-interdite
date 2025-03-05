@@ -212,16 +212,24 @@ export default function GameBoard() {
 
         fish.forEach(f => {
             if (!f.x || !f.y) return;
+        
             f.x -= f.speed;
             if (f.x < -40) f.x = p5.width;
         
+            let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
+            let yPosition = f.y + floatOffset;
+        
+            let baseScale = f.size || 1;
+            let scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
+        
             if (anonymousFishImage) {
-                p5.image(anonymousFishImage, f.x - 20, f.y - 20, 70, 70);
+                p5.image(anonymousFishImage, f.x - 20 * scaleFactor, yPosition - 20 * scaleFactor, 70 * scaleFactor, 70 * scaleFactor);
             } else {
                 p5.fill(100, 100, 100);
-                p5.ellipse(f.x, f.y, 40, 40);
+                p5.ellipse(f.x, yPosition, 40 * scaleFactor, 40 * scaleFactor);
             }
         });
+        
         
         if (showEffect && caughtFish && captureLayer) {
             captureLayer.clear();
