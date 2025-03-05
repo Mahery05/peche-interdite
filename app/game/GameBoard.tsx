@@ -46,6 +46,15 @@ export default function GameBoard() {
     };    
     const [effectFrame, setEffectFrame] = useState(0);
     const [scoreEffects, setScoreEffects] = useState<{ [key: string]: { value: number, color: number[], isNegative: boolean } }>({});
+    const [bubbles, setBubbles] = useState(
+        Array.from({ length: 15 }, () => ({
+            x: Math.random() * 800,
+            y: Math.random() * 600,
+            size: Math.random() * 10 + 5,
+            speed: Math.random() * 0.3 + 0.1
+        }))
+    );
+    const [captureLayer, setCaptureLayer] = useState<any>(null);
 
     useEffect(() => {
         socket.on("updatePlayers", (updatedPlayers) => {
@@ -141,6 +150,9 @@ export default function GameBoard() {
     };    
 
     const setup = (p5, canvasParentRef) => {
+        const newLayer = p5.createGraphics(800, 600);
+        setCaptureLayer(newLayer);
+
         p5.createCanvas(800, 600).parent(canvasParentRef);
         setP5Instance(p5);
     
@@ -149,7 +161,7 @@ export default function GameBoard() {
         p5.loadImage("/images/rare.png", img => setRareFishImage(img));
         p5.loadImage("/images/epic.png", img => setEpicFishImage(img));
         p5.loadImage("/images/danger.png", img => setDangerFishImage(img));
-    };    
+    }; 
     
 
     const draw = (p5) => {
@@ -162,7 +174,27 @@ export default function GameBoard() {
             });
         };
 
-        p5.background(0, 100, 255);
+        let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
+        gradient.addColorStop(1, "darkblue");
+        gradient.addColorStop(0, "blue");
+
+        p5.drawingContext.fillStyle = gradient;
+        p5.rect(0, 0, p5.width, p5.height);
+
+        bubbles.forEach((bubble, i) => {
+            bubble.y -= bubble.speed;
+        
+            if (bubble.y < 0) {
+                bubble.y = 600;
+                bubble.x = Math.random() * 800;
+            }
+        
+            p5.fill(255, 255, 255, 100);
+            p5.noStroke();
+            p5.ellipse(bubble.x, bubble.y, bubble.size, bubble.size);
+        });
+        
+        //p5.background(0, 100, 255);
         p5.fill(255);
         p5.textSize(24);
         p5.text(`Temps: ${timer}s`, 10, 30);
@@ -191,7 +223,9 @@ export default function GameBoard() {
             }
         });
         
-        if (showEffect && caughtFish) {
+        if (showEffect && caughtFish && captureLayer) {
+            captureLayer.clear();
+            captureLayer.imageMode(p5.CENTER);
             let fishImage;
             if (caughtFish.type === "common") fishImage = commonFishImage;
             else if (caughtFish.type === "rare") fishImage = rareFishImage;
@@ -199,22 +233,20 @@ export default function GameBoard() {
             else if (caughtFish.type === "danger") fishImage = dangerFishImage;
 
             if (fishImage) {
-                console.log("📸 Affichage du poisson pêché !");
-                p5.image(fishImage, p5.width / 2 - 50, p5.height / 2 - 50, 100, 100);
+                captureLayer.image(fishImage, captureLayer.width / 2, captureLayer.height / 2, 100, 100);
         
                 const effect = fishEffects[caughtFish.type] || fishEffects.common;
-
                 let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
                 let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
         
-                p5.noFill();
-                p5.stroke(...effect.color.slice(0, 3), alpha);
-                p5.strokeWeight(4);
-        
-                p5.ellipse(p5.width / 2, p5.height / 2, glowSize, glowSize);
-                
+                captureLayer.noFill();
+                captureLayer.stroke(...effect.color.slice(0, 3), alpha);
+                captureLayer.strokeWeight(caughtFish.type === "epic" ? 6 : 4);
+                captureLayer.ellipse(captureLayer.width / 2, captureLayer.height / 2, glowSize, glowSize);
                 setEffectFrame(effectFrame + 1);
             }
+        
+            p5.image(captureLayer, 0, 0);
         }
 
     };
