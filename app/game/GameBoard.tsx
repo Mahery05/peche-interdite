@@ -174,8 +174,8 @@ export default function GameBoard() {
             if (scoreEffects[p.id]) {
                 const { value, color } = scoreEffects[p.id];
                 p5.fill(...color);
-                p5.text(`+${value}`, 100, 60 + index * 30);
-            }
+                p5.text(`${value > 0 ? `+${value}` : value}`, 100, 60 + index * 30);
+            }            
         });
 
         fish.forEach(f => {
@@ -202,20 +202,17 @@ export default function GameBoard() {
                 console.log("📸 Affichage du poisson pêché !");
                 p5.image(fishImage, p5.width / 2 - 50, p5.height / 2 - 50, 100, 100);
         
-                // Sélectionner la couleur et la taille de l'effet en fonction du type de poisson
                 const effect = fishEffects[caughtFish.type] || fishEffects.common;
-        
-                // Animation de l'effet lumineux
-                let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10; // Lueur qui oscille
-                let alpha = 150 + Math.sin(effectFrame * 0.1) * 50; // Transparence dynamique
+
+                let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
+                let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
         
                 p5.noFill();
-                p5.stroke(...effect.color.slice(0, 3), alpha); // Garde la couleur avec transparence animée
+                p5.stroke(...effect.color.slice(0, 3), alpha);
                 p5.strokeWeight(4);
         
                 p5.ellipse(p5.width / 2, p5.height / 2, glowSize, glowSize);
                 
-                // Incrémenter l’animation
                 setEffectFrame(effectFrame + 1);
             }
         }
