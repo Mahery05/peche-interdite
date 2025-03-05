@@ -91,18 +91,28 @@ export function handleSockets(io: Server) {
         socket.on("catchFish", (roomId: string, fishId: string) => {
             const room = rooms[roomId];
             const player = room.players.find((p) => p.id === socket.id);
-
-            if (player) {
-                player.score += 1;
+            const fish = room.fish.find((f) => f.id === fishId);
+        
+            if (player && fish) {
+                if (fish.danger) {
+                    player.score = Math.max(0, player.score - 5);
+                    console.log(`Joueur ${player.id} a perdu 5 points. Nouveau score: ${player.score}`);
+                } else {
+                    player.score += 1;
+                    console.log(`Joueur ${player.id} a gagné 1 point. Nouveau score: ${player.score}`);
+                }
+        
                 room.fish = room.fish.filter((f) => f.id !== fishId);
-
+        
+                io.to(roomId).emit("updateScore", { playerId: player.id, newScore: player.score });
+        
                 io.to(roomId).emit("updateGame", {
                     timer: room.timer,
                     fish: room.fish,
                     players: room.players,
                 });
             }
-        });
+        });            
 
         socket.on("disconnecting", () => {
             for (const roomId of socket.rooms) {

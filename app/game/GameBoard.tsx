@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import socket from "../../lib/socket";
+
+const Sketch = dynamic(() => import("react-p5"), { ssr: false });
 
 type Player = {
     id: string;
@@ -13,6 +16,9 @@ type Fish = {
     id: string;
     name: string;
     danger: boolean;
+    x: number;
+    y: number;
+    speed: number;
 };
 
 export default function GameBoard() {
@@ -24,18 +30,37 @@ export default function GameBoard() {
     const [isPlaying, setIsPlaying] = useState(false);
 
     useEffect(() => {
-        socket.on("updatePlayers", setPlayers);
+        socket.on("updatePlayers", (updatedPlayers) => {
+            console.log("🔄 Mise à jour des joueurs:", updatedPlayers);
+            setPlayers(updatedPlayers);
+        });
         socket.on("startGame", ({ timer, fish, players }) => {
             setTimer(timer);
-            setFish(fish);
+            setFish(fish.map(f => ({ 
+                ...f, 
+                x: Math.random() * 750 + 25, 
+                y: Math.random() * 550 + 25, 
+                speed: Math.random() * 0.5 + 0.2 
+            })));
             setPlayers(players);
             setIsPlaying(true);
         });
+
         socket.on("updateGame", ({ timer, fish, players }) => {
-            setTimer(timer);
-            setFish(fish);
-            setPlayers(players);
+        setTimer(timer);
+        
+        setFish(prevFish => {
+            const fishMap = new Map(prevFish.map(f => [f.id, f])); 
+
+            fish.forEach(f => fishMap.set(f.id, f));
+
+            return prevFish.filter(f => fish.some(updatedFish => updatedFish.id === f.id));
         });
+        
+
+        setPlayers(players);
+    });
+
         socket.on("endGame", ({ players }) => {
             setIsPlaying(false);
             alert(
@@ -52,6 +77,22 @@ export default function GameBoard() {
         };
     }, []);
 
+    useEffect(() => {
+        socket.on("newFish", (fish) => {
+            console.log("🐟 Nouveau poisson reçu:", fish);
+    
+            setFish(prevFish => {
+                const updatedFishList = [...prevFish, fish];
+                console.log("📌 Liste mise à jour des poissons (après newFish):", updatedFishList);
+                return updatedFishList;
+            });
+        });
+    
+        return () => {
+            socket.off("newFish");
+        };
+    }, []);
+
     const joinGame = () => {
         if (username) {
             socket.emit("joinRoom", roomId, username);
@@ -59,31 +100,82 @@ export default function GameBoard() {
     };
 
     const catchFish = (fishId: string, danger: boolean) => {
+        socket.emit("catchFish", roomId, fishId);
         if (danger) {
             alert("Oh non! Un monstre marin !");
-        } else {
-            socket.emit("catchFish", roomId, fishId);
         }
     };
+    
+
+    const setup = (p5, canvasParentRef) => {
+        p5.createCanvas(800, 600).parent(canvasParentRef);
+    };
+
+    const [fishList, setFishList] = useState<Fish[]>([]);
+
+    useEffect(() => {
+        setFishList(fish);
+    }, [fish]);
+
+    const draw = (p5) => {
+        p5.mousePressed = () => {
+            fishList.forEach(f => {
+                const d = p5.dist(p5.mouseX, p5.mouseY, f.x, f.y);
+                if (d < 20) {
+                    catchFish(f.id, f.danger);
+                }
+            });
+        };
+
+        p5.background(0, 100, 255);
+        p5.fill(255);
+        p5.textSize(24);
+        p5.text(`Temps: ${timer}s`, 10, 30);
+
+        players.forEach((p, index) => {
+            p5.fill(255);
+            p5.text(`${p.username}: ${p.score}`, 10, 60 + index * 30);
+        });
+
+        fishList.forEach(f => {
+            if (!f.x || !f.y) return;
+            f.x += f.speed;
+            if (f.x > p5.width) f.x = -40;
+
+            p5.fill(f.danger ? 'red' : 'green');
+            p5.ellipse(f.x, f.y, 40, 40);
+            p5.fill(255);
+            p5.textSize(16);
+            p5.text(f.name, f.x - 20, f.y - 30);
+        });
+    };
+
 
     return (
-        <div>
+        <div className="h-screen flex items-center justify-center bg-blue-500 text-white">
             {!isPlaying ? (
-                <div>
-                    <input type="text" placeholder="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)} />
-                    <input type="text" placeholder="Pseudo" value={username} onChange={(e) => setUsername(e.target.value)} />
-                    <button onClick={joinGame}>Rejoindre la partie</button>
+                <div className="p-6 bg-white text-black rounded-lg shadow-xl flex flex-col items-center">
+                    <h1 className="text-3xl font-bold mb-4">Rejoindre une Partie</h1>
+                    <input 
+                        type="text" 
+                        placeholder="Room ID" 
+                        value={roomId} 
+                        onChange={(e) => setRoomId(e.target.value)} 
+                        className="border p-2 mb-2 w-full rounded" 
+                    />
+                    <input 
+                        type="text" 
+                        placeholder="Pseudo" 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)} 
+                        className="border p-2 mb-4 w-full rounded" 
+                    />
+                    <button onClick={joinGame} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Rejoindre
+                    </button>
                 </div>
             ) : (
-                <div>
-                    <p>Temps: {timer}s</p>
-                    {players.map(p => <p key={p.id}>{p.username}: {p.score}</p>)}
-                    {fish.map(f => (
-                        <button key={f.id} onClick={() => catchFish(f.id, f.danger)}>
-                            {f.name}
-                        </button>
-                    ))}
-                </div>
+                <Sketch setup={setup} draw={draw} />
             )}
         </div>
     );
