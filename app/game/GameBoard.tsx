@@ -67,6 +67,8 @@ export default function GameBoard() {
     const [countdown, setCountdown] = useState<number | null>(null);
     const [gameStartedError, setGameStartedError] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
+    let titleText = "La Pêche Interdite";
+    let waveOffset = 0;
 
     useEffect(() => {
         socket.on("gameAlreadyStarted", () => {
@@ -367,10 +369,28 @@ const drawGameOver = (p5) => {
         }
 
         if (!isPlaying) {
-            p5.fill(255);
+            /*p5.fill(255);
             p5.textSize(32);
             p5.textAlign(p5.CENTER, p5.CENTER);
-            p5.text("La Pêche Interdite", p5.width / 2, p5.height / 3);
+            p5.text("La Pêche Interdite", p5.width / 2, p5.height / 3);*/
+            p5.fill(255);
+            p5.push();
+            p5.textSize(64);
+            p5.fill(0, 180, 255);
+            p5.textAlign(p5.CENTER, p5.CENTER); 
+            p5.textFont("Arial"); 
+            
+            let centerX = p5.width / 2 + 35;
+            let centerY = 150;
+            
+            for (let i = 0; i < titleText.length; i++) {
+                let x = centerX - (titleText.length * 16) + i * 32;
+                let y = centerY + p5.sin(waveOffset + i * 0.3) * 5;
+                p5.text(titleText[i], x, y);
+            }
+
+            waveOffset += 0.07;
+            p5.pop();
 
             p5.textSize(20);
             p5.textAlign(p5.LEFT, p5.CENTER);
