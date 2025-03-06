@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -60,8 +64,18 @@ export default function GameBoard() {
     const [blurEffect, setBlurEffect] = useState(false);
     const [typingField, setTypingField] = useState<string | null>(null);
     const [waitingForPlayers, setWaitingForPlayers] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
     const [isGameOver, setIsGameOver] = useState(false);
 
+    useEffect(() => {
+        socket.on("countdownUpdate", (timeLeft) => {
+            setCountdown(timeLeft);
+        });
+    
+        return () => {
+            socket.off("countdownUpdate");
+        };
+    }, []);    
 
     useEffect(() => {
         const handleKeyPress = (event: KeyboardEvent) => {
@@ -135,9 +149,9 @@ export default function GameBoard() {
 
         socket.on("endGame", ({ players }) => {
             setIsPlaying(false);
-            setIsGameOver(true); // Affiche le Game Over
-            setPlayers(players); // Garde la liste des scores finaux
-            setWaitingForPlayers(false); // Désactive l'attente
+            setIsGameOver(true);  // Affiche l'écran de Game Over
+            setPlayers(players);  // Garde la liste des scores finaux
+            setWaitingForPlayers(false);
         });
         
 
@@ -150,9 +164,16 @@ export default function GameBoard() {
     }, []);
 
     useEffect(() => {
-        socket.on("newFish", (fish) => {
-            console.log("🐟 Nouveau poisson reçu:", fish);
-            setFish(prevFish => [...prevFish, fish]);
+        socket.on("newFish", (newFish) => {
+            console.log(`🐟 Nouveaux poissons reçus:`, newFish);
+    
+            const fishToAdd = Array.isArray(newFish) ? newFish : [newFish];
+    
+            setFish(prevFish => {
+                const updatedFish = [...prevFish, ...fishToAdd];
+                console.log("🎮 Liste des poissons après mise à jour:", updatedFish);
+                return updatedFish;
+            });
         });
 
         return () => {
@@ -229,7 +250,7 @@ export default function GameBoard() {
         const newLayer = p5.createGraphics(800, 600);
         setCaptureLayer(newLayer);
 
-        const canvas = p5.createCanvas(800, 600).parent(canvasParentRef);
+        let canvas = p5.createCanvas(800, 600).parent(canvasParentRef);
         canvas.style("display", "block");
         canvas.style("margin", "auto");
         setP5Instance(p5);
@@ -243,9 +264,9 @@ export default function GameBoard() {
         p5.mousePressed = () => {
             
         };
-    };
+    }; 
 
-    // Ajoute cette constante à l'extérieur (au niveau de tes useState)
+        // Ajoute cette constante à l'extérieur (au niveau de tes useState)
 const initialTimer = 60; // Durée initiale complète
 
 // Fonction pour dessiner la barre de temps
@@ -269,36 +290,28 @@ const drawTimerBar = (p5) => {
     p5.text(`${timer}s`, 10 + barWidth / 2, 10 + barHeight / 2);
 };
 
-    
-    
-    const drawGameOver = (p5) => {
-        p5.fill(255);
-        p5.textSize(32);
-        p5.textAlign(p5.CENTER, p5.CENTER);
-        p5.text("Fin de la partie !", p5.width / 2, p5.height / 2 - 50);
-    
-        p5.textSize(24);
-        p5.text("Scores finaux :", p5.width / 2, p5.height / 2);
-    
-        players.forEach((p, index) => {
-            p5.text(
-                `${p.username}: ${p.score}`,
-                p5.width / 2,
-                p5.height / 2 + 30 + index * 30
-            );
-        });
-    
-        p5.fill(0, 122, 255);
-        p5.rect(p5.width / 2 - 60, p5.height / 2 + 120, 120, 40, 10);
-    
-        p5.fill(255);
-        p5.textSize(22);
-        p5.text("Rejouer", p5.width / 2, p5.height / 2 + 140);
-    };    
-    
+const drawGameOver = (p5) => {
+    p5.fill(255);
+    p5.textSize(32);
+    p5.textAlign(p5.CENTER, p5.CENTER);
+    p5.text("Fin de la partie !", p5.width / 2, p5.height / 2 - 100);
+
+    p5.textSize(24);
+    p5.text("Scores finaux :", p5.width / 2, p5.height / 2 - 60);
+
+    players.forEach((p, index) => {
+        p5.text(`${p.username}: ${p.score}`, p5.width / 2, p5.height / 2 - 30 + index * 30);
+    });
+
+    p5.fill(0, 122, 255);
+    p5.rect(p5.width / 2 - 60, p5.height / 2 + 100, 120, 40, 10);
+    p5.fill(255);
+    p5.textSize(22);
+    p5.text("Rejouer", p5.width / 2, p5.height / 2 + 120);
+};
 
     const drawBackground = (p5) => {
-        const gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
+        let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
         gradient.addColorStop(1, "darkblue");
         gradient.addColorStop(0, "blue");
 
@@ -322,7 +335,11 @@ const drawTimerBar = (p5) => {
             p5.fill(255);
             p5.textSize(32);
             p5.textAlign(p5.CENTER, p5.CENTER);
-            p5.text("En attente de joueurs...", p5.width / 2, p5.height / 2);
+            if (countdown !== null) {
+                p5.text(`La partie commence dans ${countdown}s... (${players.length}/4)`, p5.width / 2, p5.height / 3 - 50);
+            } else {
+                p5.text(`En attente de joueurs... (${players.length}/4)`, p5.width / 2, p5.height / 3 - 50);
+            }            
             return; 
         }
 
@@ -330,6 +347,7 @@ const drawTimerBar = (p5) => {
             drawGameOver(p5);
             return;
         }
+        
 
         if (!isPlaying) {
             p5.fill(255);
@@ -366,19 +384,24 @@ const drawTimerBar = (p5) => {
     const drawGame = (p5) => {
         drawBackground(p5);
     
-        if (isGameOver) {
-            drawGameOver(p5);
-            return;
-        }
-    
         if (isPlaying) {
             drawTimerBar(p5);  // <-- Ajoute la barre de temps ici
         }
     
         draw(p5);
     };
-    
-    
+
+    const resetGame = () => {
+        setIsGameOver(false);
+        setIsPlaying(false);
+        setPlayers([]);
+        setFish([]);
+        setTimer(120);
+        setShowEffect(false);
+        setCaughtFish(null);
+        setWaitingForPlayers(false);
+        setCountdown(null);
+    };
     
 
     const draw = (p5) => {
@@ -409,25 +432,17 @@ const drawTimerBar = (p5) => {
                     joinGame();
                 }
             }
-            
+
             if (isGameOver) {
                 if (
                     p5.mouseX > p5.width / 2 - 60 &&
                     p5.mouseX < p5.width / 2 + 60 &&
-                    p5.mouseY > p5.height / 2 + 120 &&
-                    p5.mouseY < p5.height / 2 + 160
+                    p5.mouseY > p5.height / 2 + 100 &&
+                    p5.mouseY < p5.height / 2 + 140
                 ) {
-                    // Réinitialise tout comme si on revenait à l'accueil
-                    setIsGameOver(false);
-                    setIsPlaying(false);
-                    setPlayers([]);
-                    setFish([]);
-                    setTimer(120);
-                    setShowEffect(false);
-                    setCaughtFish(null);
-                    setWaitingForPlayers(false);
+                    resetGame();
                 }
-                return; // Important pour éviter de cliquer sur autre chose en même temps
+                return; // Pour éviter d'interagir avec d'autres éléments
             }
             
         };
@@ -452,14 +467,34 @@ const drawTimerBar = (p5) => {
             fish.forEach(f => {
                 if (!f.x || !f.y) return;
             
-                f.x -= f.speed;
-                if (f.x < -40) f.x = p5.width;
+                if (f.type === "epic") {
+                    // 🎯 Random Walk (mouvement aléatoire du poisson épique)
+                    let maxSpeed = 1.2;  
+                    let changement = 0.1;  
             
-                const floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
-                const yPosition = f.y + floatOffset;
+                    f.vx += p5.random(-changement, changement);
+                    f.vy += p5.random(-changement, changement);
             
-                const baseScale = f.size || 1;
-                const scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
+                    f.vx = p5.constrain(f.vx, -maxSpeed, maxSpeed);
+                    f.vy = p5.constrain(f.vy, -maxSpeed, maxSpeed);
+            
+                    f.x += f.vx;
+                    f.y += f.vy;
+            
+                    // Garder le poisson épique dans les limites
+                    f.x = p5.constrain(f.x, 20, p5.width - 20);
+                    f.y = p5.constrain(f.y, 20, p5.height - 20);
+                } else {
+                    // 🐟 Déplacement normal pour les autres poissons
+                    f.x -= f.speed;
+                    if (f.x < -40) f.x = p5.width;
+                }
+            
+                let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
+                let yPosition = f.y + floatOffset;
+            
+                let baseScale = f.size || 1;
+                let scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
             
                 if (anonymousFishImage) {
                     p5.image(anonymousFishImage, f.x - 20 * scaleFactor, yPosition - 20 * scaleFactor, 70 * scaleFactor, 70 * scaleFactor);
@@ -467,7 +502,7 @@ const drawTimerBar = (p5) => {
                     p5.fill(100, 100, 100);
                     p5.ellipse(f.x, yPosition, 40 * scaleFactor, 40 * scaleFactor);
                 }
-            });
+            });            
             
             
             if (showEffect && caughtFish && captureLayer) {
@@ -483,8 +518,8 @@ const drawTimerBar = (p5) => {
                     captureLayer.image(fishImage, captureLayer.width / 2, captureLayer.height / 2, 100, 100);
             
                     const effect = fishEffects[caughtFish.type] || fishEffects.common;
-                    const glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
-                    const alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
+                    let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
+                    let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
             
                     captureLayer.noFill();
                     captureLayer.stroke(...effect.color.slice(0, 3), alpha);
