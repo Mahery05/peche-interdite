@@ -59,7 +59,9 @@ export default function GameBoard() {
     const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
     const [blurEffect, setBlurEffect] = useState(false);
     const [typingField, setTypingField] = useState<string | null>(null);
+    const [waitingForPlayers, setWaitingForPlayers] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
+
 
     useEffect(() => {
         const handleKeyPress = (event: KeyboardEvent) => {
@@ -133,10 +135,12 @@ export default function GameBoard() {
 
         socket.on("endGame", ({ players }) => {
             setIsPlaying(false);
-            setIsGameOver(true); // On affiche l'écran de Game Over
-            setPlayers(players); // On stocke les scores finaux
+            setIsGameOver(true); // Affiche le Game Over
+            setPlayers(players); // Garde la liste des scores finaux
+            setWaitingForPlayers(false); // Désactive l'attente
         });
         
+
         return () => {
             socket.off("updatePlayers");
             socket.off("startGame");
@@ -159,6 +163,7 @@ export default function GameBoard() {
     const joinGame = () => {
         if (username) {
             socket.emit("joinRoom", roomId, username);
+            setWaitingForPlayers(true);
         }
     };
 
@@ -238,7 +243,33 @@ export default function GameBoard() {
         p5.mousePressed = () => {
             
         };
-    }; 
+    };
+    
+    const drawGameOver = (p5) => {
+        p5.fill(255);
+        p5.textSize(32);
+        p5.textAlign(p5.CENTER, p5.CENTER);
+        p5.text("Fin de la partie !", p5.width / 2, p5.height / 2 - 50);
+    
+        p5.textSize(24);
+        p5.text("Scores finaux :", p5.width / 2, p5.height / 2);
+    
+        players.forEach((p, index) => {
+            p5.text(
+                `${p.username}: ${p.score}`,
+                p5.width / 2,
+                p5.height / 2 + 30 + index * 30
+            );
+        });
+    
+        p5.fill(0, 122, 255);
+        p5.rect(p5.width / 2 - 60, p5.height / 2 + 120, 120, 40, 10);
+    
+        p5.fill(255);
+        p5.textSize(22);
+        p5.text("Rejouer", p5.width / 2, p5.height / 2 + 140);
+    };    
+    
 
     const drawBackground = (p5) => {
         const gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
@@ -261,6 +292,19 @@ export default function GameBoard() {
             p5.ellipse(bubble.x, bubble.y, bubble.size, bubble.size);
         });
 
+        if (waitingForPlayers && !isPlaying) {
+            p5.fill(255);
+            p5.textSize(32);
+            p5.textAlign(p5.CENTER, p5.CENTER);
+            p5.text("En attente de joueurs...", p5.width / 2, p5.height / 2);
+            return; 
+        }
+
+        if (isGameOver) {
+            drawGameOver(p5);
+            return;
+        }
+
         if (!isPlaying) {
             p5.fill(255);
             p5.textSize(32);
@@ -271,16 +315,16 @@ export default function GameBoard() {
             p5.textAlign(p5.LEFT, p5.CENTER);
 
             p5.text("Room ID:", p5.width / 2 - 100, p5.height / 2 - 40);
-            p5.fill(200);
+            p5.fill(typingField === "room" ? 180 : 200);
             p5.rect(p5.width / 2 - 100, p5.height / 2 - 25, 200, 30, 5);
-            p5.fill(50);
+            p5.fill(typingField === "room" ? 0 : 50);
             p5.text(roomId, p5.width / 2 - 90, p5.height / 2 - 10);
 
             p5.fill(255);
             p5.text("Pseudo:", p5.width / 2 - 100, p5.height / 2 + 20);
-            p5.fill(200);
+            p5.fill(typingField === "pseudo" ? 180 : 200);
             p5.rect(p5.width / 2 - 100, p5.height / 2 + 35, 200, 30, 5);
-            p5.fill(50);
+            p5.fill(typingField === "pseudo" ? 0 : 50);
             p5.text(username, p5.width / 2 - 90, p5.height / 2 + 50);
 
             p5.fill(0, 122, 255);
@@ -292,31 +336,6 @@ export default function GameBoard() {
 
         }
     };
-
-    const drawGameOver = (p5) => {
-        p5.fill(0, 0, 0, 180);  // Fond semi-transparent
-        p5.rect(0, 0, p5.width, p5.height);
-    
-        p5.fill(255);
-        p5.textSize(48);
-        p5.textAlign(p5.CENTER, p5.CENTER);
-        p5.text("Game Over", p5.width / 2, p5.height / 3);
-    
-        p5.textSize(24);
-        p5.text("Scores finaux :", p5.width / 2, p5.height / 2 - 20);
-    
-        players.forEach((p, index) => {
-            p5.text(`${p.username}: ${p.score}`, p5.width / 2, p5.height / 2 + 30 + index * 30);
-        });
-    
-        // Bouton Rejouer
-        p5.fill(0, 122, 255);
-        p5.rect(p5.width / 2 - 60, p5.height / 2 + 120, 120, 40, 10);
-        p5.fill(255);
-        p5.textSize(22);
-        p5.text("Rejouer", p5.width / 2, p5.height / 2 + 140);
-    };
-    
 
     const drawGame = (p5) => {
         drawBackground(p5);
@@ -367,12 +386,19 @@ export default function GameBoard() {
                     p5.mouseY > p5.height / 2 + 120 &&
                     p5.mouseY < p5.height / 2 + 160
                 ) {
-                    // Reset des états pour revenir à l'écran d'accueil
+                    // Réinitialise tout comme si on revenait à l'accueil
                     setIsGameOver(false);
                     setIsPlaying(false);
                     setPlayers([]);
+                    setFish([]);
+                    setTimer(120);
+                    setShowEffect(false);
+                    setCaughtFish(null);
+                    setWaitingForPlayers(false);
                 }
+                return; // Important pour éviter de cliquer sur autre chose en même temps
             }
+            
             
         };
         
