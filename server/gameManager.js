@@ -11,27 +11,35 @@ function createRoom(roomId) {
     };
 }
 
-function generateFish(count = 5) {
+function generateFish() {
     const fishTypes = [
-        { type: "common", points: 1, name: "Poisson Commun" },
-        { type: "rare", points: 2, name: "Poisson Rare" },
-        { type: "epic", points: 4, name: "Poisson Épique" },
-        { type: "danger", points: -2, name: "Poisson Dangereux" }
+        { type: "common", points: 1, name: "Poisson Commun", probability: 0.6 },
+        { type: "rare", points: 2, name: "Poisson Rare", probability: 0.25 }, 
+        { type: "epic", points: 4, name: "Poisson Épique", probability: 0.10 },
+        { type: "danger", points: -2, name: "Poisson Dangereux", probability: 0.20 } 
     ];
 
-    return Array.from({ length: count }, () => {
-        const selectedType = fishTypes[Math.floor(Math.random() * fishTypes.length)];
-        return {
-            id: Math.random().toString(36).substring(2, 9),
-            name: selectedType.name,
-            type: selectedType.type,
-            points: selectedType.points,
-            x: Math.random() * 750 + 25,
-            y: Math.random() * 550 + 25,
-            speed: Math.random() * 0.8 + 0.3,
-            size: Math.random() * 0.3 + 0.8
-        };
-    });
+    let rand = Math.random();
+    let cumulativeProbability = 0;
+    let selectedType = fishTypes[0];
+
+    for (let fish of fishTypes) {
+        cumulativeProbability += fish.probability;
+        if (rand < cumulativeProbability) {
+            selectedType = fish;
+            break;
+        }
+    }
+
+    return {
+        id: Math.random().toString(36).substring(2, 9),
+        name: selectedType.name,
+        type: selectedType.type,
+        points: selectedType.points,
+        x: Math.random() * 750 + 25,
+        y: Math.random() * 550 + 25,
+        speed: Math.random() * 0.5 + 0.2
+    };
 }
 
 
@@ -42,14 +50,8 @@ function startGame(io, roomId) {
     room.timer = 60;
 
     if (room.fish.length === 0) { 
-        if (!Array.isArray(room.fish)) {
-            room.fish = []; 
-        }
-        
-        if (room.fish.length === 0) { 
-            room.fish = generateFish(5);
-        }        
-    }
+        room.fish = Array.from({ length: 10 }, () => generateFish());
+    }    
 
     io.to(roomId).emit("startGame", {
         timer: room.timer,
@@ -63,8 +65,8 @@ function startGame(io, roomId) {
         if (room.timer <= 0) {
             endGame(io, roomId);
         } else {
-            if (room.timer % 5 === 0) { 
-                const newFish = generateFish()[0]; 
+            if (room.timer % 1.5 === 0) { 
+                const newFish = generateFish(); 
                 room.fish.push(newFish); 
             
                 console.log(`🐟 Nouveau poisson ajouté: ${newFish.id}, envoi à tous les joueurs...`);
