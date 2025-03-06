@@ -28,7 +28,8 @@ function generateFish(count = 5) {
             points: selectedType.points,
             x: Math.random() * 750 + 25,
             y: Math.random() * 550 + 25,
-            speed: Math.random() * 0.5 + 0.2
+            speed: Math.random() * 0.8 + 0.3,
+            size: Math.random() * 0.3 + 0.8
         };
     });
 }
@@ -38,7 +39,7 @@ function generateFish(count = 5) {
 
 function startGame(io, roomId) {
     const room = rooms[roomId];
-    room.timer = 120;
+    room.timer = 60;
 
     if (room.fish.length === 0) { 
         if (!Array.isArray(room.fish)) {
@@ -62,7 +63,7 @@ function startGame(io, roomId) {
         if (room.timer <= 0) {
             endGame(io, roomId);
         } else {
-            if (room.timer % 5 === 0) { 
+            if (room.timer % 2 === 0) { 
                 const newFish = generateFish()[0]; 
                 room.fish.push(newFish); 
             

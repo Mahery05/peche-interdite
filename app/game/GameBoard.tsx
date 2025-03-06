@@ -45,7 +45,52 @@ export default function GameBoard() {
         danger: { color: [255, 0, 0, 220], size: 160 }
     };    
     const [effectFrame, setEffectFrame] = useState(0);
-    const [scoreEffects, setScoreEffects] = useState<{ [key: string]: { value: number, color: number[], isNegative: boolean } }>({});
+    const [scoreEffects, setScoreEffects] = useState<{ [key: string]: { value: number, color: number[] } }>({});
+    const [bubbles, setBubbles] = useState(
+        Array.from({ length: 15 }, () => ({
+            x: Math.random() * 800,
+            y: Math.random() * 600,
+            size: Math.random() * 10 + 5,
+            speed: Math.random() * 0.3 + 0.1
+        }))
+    );
+    const [captureLayer, setCaptureLayer] = useState<any>(null);
+    const [backgroundSound, setBackgroundSound] = useState<any>(null);
+    const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
+
+    useEffect(() => {
+        if (typeof window !== "undefined") { 
+            const newFishSounds = {
+                common: new Audio("/sounds/commun.mp3"),
+                rare: new Audio("/sounds/rare.mp3"),
+                epic: new Audio("/sounds/epic.mp3"),
+                danger: new Audio("/sounds/danger.mp3"),
+            };
+    
+            Object.values(newFishSounds).forEach(sound => {
+                sound.volume = 0.1;
+            });
+    
+            setFishSounds(newFishSounds);
+    
+            const oceanSound = new Audio("/sounds/water.mp3");
+            oceanSound.loop = true;
+            oceanSound.volume = 0.3;
+
+            const startSound = () => {
+                oceanSound.play().catch(err => console.warn("🔇 Audio bloqué :", err));
+                document.removeEventListener("click", startSound);
+                document.removeEventListener("keydown", startSound);
+            };
+
+            document.addEventListener("click", startSound);
+            document.addEventListener("keydown", startSound);
+
+            setBackgroundSound(oceanSound);
+        }
+    }, []);
+    
+
 
     useEffect(() => {
         socket.on("updatePlayers", (updatedPlayers) => {
@@ -102,6 +147,19 @@ export default function GameBoard() {
     const catchFish = (fishId: string) => {
         const selectedFish = fish.find(f => f.id === fishId) || null;
         if (!selectedFish) return;
+        if (selectedFish) {
+            const sound = fishSounds[selectedFish.type];
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(err => console.error("🎵 Erreur de lecture :", err));
+        
+                setTimeout(() => {
+                    sound.pause();
+                    sound.currentTime = 0;
+                }, 1500);
+            }
+        }        
+        
     
         setFish(prevFish => prevFish.filter(f => f.id !== fishId));
         socket.emit("catchFish", roomId, fishId);
@@ -141,7 +199,12 @@ export default function GameBoard() {
     };    
 
     const setup = (p5, canvasParentRef) => {
-        p5.createCanvas(800, 600).parent(canvasParentRef);
+        const newLayer = p5.createGraphics(800, 600);
+        setCaptureLayer(newLayer);
+
+        let canvas = p5.createCanvas(800, 600).parent(canvasParentRef);
+        canvas.style("display", "block");
+        canvas.style("margin", "auto");
         setP5Instance(p5);
     
         p5.loadImage("/images/fish.png", img => setAnonymousFishImage(img));
@@ -149,7 +212,7 @@ export default function GameBoard() {
         p5.loadImage("/images/rare.png", img => setRareFishImage(img));
         p5.loadImage("/images/epic.png", img => setEpicFishImage(img));
         p5.loadImage("/images/danger.png", img => setDangerFishImage(img));
-    };    
+    }; 
     
 
     const draw = (p5) => {
@@ -162,7 +225,27 @@ export default function GameBoard() {
             });
         };
 
-        p5.background(0, 100, 255);
+        let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
+        gradient.addColorStop(1, "darkblue");
+        gradient.addColorStop(0, "blue");
+
+        p5.drawingContext.fillStyle = gradient;
+        p5.rect(0, 0, p5.width, p5.height);
+
+        bubbles.forEach((bubble, i) => {
+            bubble.y -= bubble.speed;
+        
+            if (bubble.y < 0) {
+                bubble.y = 600;
+                bubble.x = Math.random() * 800;
+            }
+        
+            p5.fill(255, 255, 255, 100);
+            p5.noStroke();
+            p5.ellipse(bubble.x, bubble.y, bubble.size, bubble.size);
+        });
+        
+        //p5.background(0, 100, 255);
         p5.fill(255);
         p5.textSize(24);
         p5.text(`Temps: ${timer}s`, 10, 30);
@@ -180,18 +263,28 @@ export default function GameBoard() {
 
         fish.forEach(f => {
             if (!f.x || !f.y) return;
+        
             f.x -= f.speed;
             if (f.x < -40) f.x = p5.width;
         
+            let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
+            let yPosition = f.y + floatOffset;
+        
+            let baseScale = f.size || 1;
+            let scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
+        
             if (anonymousFishImage) {
-                p5.image(anonymousFishImage, f.x - 20, f.y - 20, 70, 70);
+                p5.image(anonymousFishImage, f.x - 20 * scaleFactor, yPosition - 20 * scaleFactor, 70 * scaleFactor, 70 * scaleFactor);
             } else {
                 p5.fill(100, 100, 100);
-                p5.ellipse(f.x, f.y, 40, 40);
+                p5.ellipse(f.x, yPosition, 40 * scaleFactor, 40 * scaleFactor);
             }
         });
         
-        if (showEffect && caughtFish) {
+        
+        if (showEffect && caughtFish && captureLayer) {
+            captureLayer.clear();
+            captureLayer.imageMode(p5.CENTER);
             let fishImage;
             if (caughtFish.type === "common") fishImage = commonFishImage;
             else if (caughtFish.type === "rare") fishImage = rareFishImage;
@@ -199,22 +292,20 @@ export default function GameBoard() {
             else if (caughtFish.type === "danger") fishImage = dangerFishImage;
 
             if (fishImage) {
-                console.log("📸 Affichage du poisson pêché !");
-                p5.image(fishImage, p5.width / 2 - 50, p5.height / 2 - 50, 100, 100);
+                captureLayer.image(fishImage, captureLayer.width / 2, captureLayer.height / 2, 100, 100);
         
                 const effect = fishEffects[caughtFish.type] || fishEffects.common;
-
                 let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
                 let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
         
-                p5.noFill();
-                p5.stroke(...effect.color.slice(0, 3), alpha);
-                p5.strokeWeight(4);
-        
-                p5.ellipse(p5.width / 2, p5.height / 2, glowSize, glowSize);
-                
+                captureLayer.noFill();
+                captureLayer.stroke(...effect.color.slice(0, 3), alpha);
+                captureLayer.strokeWeight(caughtFish.type === "epic" ? 6 : 4);
+                captureLayer.ellipse(captureLayer.width / 2, captureLayer.height / 2, glowSize, glowSize);
                 setEffectFrame(effectFrame + 1);
             }
+        
+            p5.image(captureLayer, 0, 0);
         }
 
     };
