@@ -11,4 +11,5 @@ const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.Server(server, { cors: { origin: "*" } });
 (0, gameManager_1.handleSockets)(io);
-server.listen(3001, () => console.log("✅ Serveur lancé sur http://localhost:3001"));
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => console.log("✅ Serveur lancé sur http://localhost:3001"));
