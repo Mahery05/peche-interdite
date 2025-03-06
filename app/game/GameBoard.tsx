@@ -59,6 +59,7 @@ export default function GameBoard() {
     const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
     const [blurEffect, setBlurEffect] = useState(false);
     const [typingField, setTypingField] = useState<string | null>(null);
+    const [waitingForPlayers, setWaitingForPlayers] = useState(false);
 
     useEffect(() => {
         const handleKeyPress = (event: KeyboardEvent) => {
@@ -136,6 +137,7 @@ export default function GameBoard() {
                 "Fin de la partie! Scores: " +
                 players.map((p: Player) => `${p.username}: ${p.score}`).join(", ")
             );
+            setWaitingForPlayers(false);
         });
 
         return () => {
@@ -160,6 +162,7 @@ export default function GameBoard() {
     const joinGame = () => {
         if (username) {
             socket.emit("joinRoom", roomId, username);
+            setWaitingForPlayers(true);
         }
     };
 
@@ -262,6 +265,14 @@ export default function GameBoard() {
             p5.ellipse(bubble.x, bubble.y, bubble.size, bubble.size);
         });
 
+        if (waitingForPlayers && !isPlaying) {
+            p5.fill(255);
+            p5.textSize(32);
+            p5.textAlign(p5.CENTER, p5.CENTER);
+            p5.text("En attente de joueurs...", p5.width / 2, p5.height / 2);
+            return; 
+        }
+
         if (!isPlaying) {
             p5.fill(255);
             p5.textSize(32);
@@ -272,16 +283,16 @@ export default function GameBoard() {
             p5.textAlign(p5.LEFT, p5.CENTER);
 
             p5.text("Room ID:", p5.width / 2 - 100, p5.height / 2 - 40);
-            p5.fill(200);
+            p5.fill(typingField === "room" ? 180 : 200);
             p5.rect(p5.width / 2 - 100, p5.height / 2 - 25, 200, 30, 5);
-            p5.fill(50);
+            p5.fill(typingField === "room" ? 0 : 50);
             p5.text(roomId, p5.width / 2 - 90, p5.height / 2 - 10);
 
             p5.fill(255);
             p5.text("Pseudo:", p5.width / 2 - 100, p5.height / 2 + 20);
-            p5.fill(200);
+            p5.fill(typingField === "pseudo" ? 180 : 200);
             p5.rect(p5.width / 2 - 100, p5.height / 2 + 35, 200, 30, 5);
-            p5.fill(50);
+            p5.fill(typingField === "pseudo" ? 0 : 50);
             p5.text(username, p5.width / 2 - 90, p5.height / 2 + 50);
 
             p5.fill(0, 122, 255);
