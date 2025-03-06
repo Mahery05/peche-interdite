@@ -63,7 +63,7 @@ function startGame(io, roomId) {
         if (room.timer <= 0) {
             endGame(io, roomId);
         } else {
-            if (room.timer % 2 === 0) { 
+            if (room.timer % 5 === 0) { 
                 const newFish = generateFish()[0]; 
                 room.fish.push(newFish); 
             

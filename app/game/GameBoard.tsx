@@ -57,6 +57,7 @@ export default function GameBoard() {
     const [captureLayer, setCaptureLayer] = useState<any>(null);
     const [backgroundSound, setBackgroundSound] = useState<any>(null);
     const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
+    const [blurEffect, setBlurEffect] = useState(false);
 
     useEffect(() => {
         if (typeof window !== "undefined") { 
@@ -159,7 +160,11 @@ export default function GameBoard() {
                 }, 1500);
             }
         }        
-        
+
+        if (selectedFish.type === "danger") {
+            setBlurEffect(true);
+            setTimeout(() => setBlurEffect(false), 2000);
+        }        
     
         setFish(prevFish => prevFish.filter(f => f.id !== fishId));
         socket.emit("catchFish", roomId, fishId);
@@ -311,7 +316,7 @@ export default function GameBoard() {
     };
 
     return (
-        <div className="h-screen flex items-center justify-center bg-blue-500 text-white">
+        <div className={`h-screen flex items-center justify-center bg-blue-500 text-white ${blurEffect ? "blur-effect" : ""}`}>
             {!isPlaying ? (
                 <div className="p-6 bg-white text-black rounded-lg shadow-xl flex flex-col items-center">
                     <h1 className="text-3xl font-bold mb-4">Rejoindre une Partie</h1>

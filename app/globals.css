@@ -44,6 +44,10 @@ canvas {
   animation: glow 3s infinite alternate ease-in-out;
 }
 
+.blur-effect {
+  filter: blur(10px);
+  transition: filter 1s ease-in-out;
+}
 
 * {
   box-sizing: border-box;
