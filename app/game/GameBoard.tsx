@@ -378,7 +378,7 @@ export default function GameBoard() {
                     joinGame();
                 }
             }
-
+            
             if (isGameOver) {
                 if (
                     p5.mouseX > p5.width / 2 - 60 &&
@@ -398,7 +398,6 @@ export default function GameBoard() {
                 }
                 return; // Important pour éviter de cliquer sur autre chose en même temps
             }
-            
             
         };
         
