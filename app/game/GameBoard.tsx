@@ -368,8 +368,28 @@ export default function GameBoard() {
             fish.forEach(f => {
                 if (!f.x || !f.y) return;
             
-                f.x -= f.speed;
-                if (f.x < -40) f.x = p5.width;
+                if (f.type === "epic") {
+                    // 🎯 Random Walk (mouvement aléatoire du poisson épique)
+                    let maxSpeed = 1.2;  
+                    let changement = 0.1;  
+            
+                    f.vx += p5.random(-changement, changement);
+                    f.vy += p5.random(-changement, changement);
+            
+                    f.vx = p5.constrain(f.vx, -maxSpeed, maxSpeed);
+                    f.vy = p5.constrain(f.vy, -maxSpeed, maxSpeed);
+            
+                    f.x += f.vx;
+                    f.y += f.vy;
+            
+                    // Garder le poisson épique dans les limites
+                    f.x = p5.constrain(f.x, 20, p5.width - 20);
+                    f.y = p5.constrain(f.y, 20, p5.height - 20);
+                } else {
+                    // 🐟 Déplacement normal pour les autres poissons
+                    f.x -= f.speed;
+                    if (f.x < -40) f.x = p5.width;
+                }
             
                 let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
                 let yPosition = f.y + floatOffset;
@@ -383,7 +403,7 @@ export default function GameBoard() {
                     p5.fill(100, 100, 100);
                     p5.ellipse(f.x, yPosition, 40 * scaleFactor, 40 * scaleFactor);
                 }
-            });
+            });            
             
             
             if (showEffect && caughtFish && captureLayer) {
