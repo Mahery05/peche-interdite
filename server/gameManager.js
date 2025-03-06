@@ -65,18 +65,18 @@ function startGame(io, roomId) {
         if (room.timer <= 0) {
             endGame(io, roomId);
         } else {
-            if (room.timer % 1.5 === 0) { 
-                const newFish = generateFish(); 
-                room.fish.push(newFish); 
-            
-                console.log(`🐟 Nouveau poisson ajouté: ${newFish.id}, envoi à tous les joueurs...`);
+            if (room.timer % 1.5 === 0) {
+                const numberOfFish = Math.floor(Math.random() * 3) + 1;
+                const newFish = Array.from({ length: numberOfFish }, () => generateFish());
+                room.fish.push(...newFish); 
+
+                console.log(`🐟 ${numberOfFish} nouveaux poissons ajoutés !`);
                 io.to(roomId).emit("newFish", newFish);
             }
-            
 
             io.to(roomId).emit("updateGame", {
                 timer: room.timer,
-                fish: Array.isArray(room.fish) ? [...room.fish] : [],
+                fish: [...room.fish],
                 players: room.players,
             });
         }

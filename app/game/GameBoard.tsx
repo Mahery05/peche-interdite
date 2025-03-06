@@ -149,9 +149,16 @@ export default function GameBoard() {
     }, []);
 
     useEffect(() => {
-        socket.on("newFish", (fish) => {
-            console.log("🐟 Nouveau poisson reçu:", fish);
-            setFish(prevFish => [...prevFish, fish]);
+        socket.on("newFish", (newFish) => {
+            console.log(`🐟 Nouveaux poissons reçus:`, newFish);
+    
+            const fishToAdd = Array.isArray(newFish) ? newFish : [newFish];
+    
+            setFish(prevFish => {
+                const updatedFish = [...prevFish, ...fishToAdd];
+                console.log("🎮 Liste des poissons après mise à jour:", updatedFish);
+                return updatedFish;
+            });
         });
 
         return () => {
