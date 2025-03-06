@@ -266,6 +266,30 @@ export default function GameBoard() {
         };
     }; 
 
+        // Ajoute cette constante à l'extérieur (au niveau de tes useState)
+const initialTimer = 60; // Durée initiale complète
+
+// Fonction pour dessiner la barre de temps
+const drawTimerBar = (p5) => {
+    const barWidth = p5.width - 20; // largeur totale de la barre
+    const barHeight = 20; // hauteur de la barre
+    const progress = timer / initialTimer; // Utilise initialTimer pour que la barre soit correcte
+
+    // Dessine la barre de fond
+    p5.fill(50); // Couleur de fond
+    p5.rect(10, 10, barWidth, barHeight);
+
+    // Dessine la barre de progression
+    p5.fill(0, 200, 255);
+    p5.rect(10, 10, barWidth * progress, barHeight);
+
+    // Affiche le texte du timer
+    p5.fill(255);
+    p5.textSize(14);
+    p5.textAlign(p5.CENTER, p5.CENTER);
+    p5.text(`${timer}s`, 10 + barWidth / 2, 10 + barHeight / 2);
+};
+
     const drawBackground = (p5) => {
         let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
         gradient.addColorStop(1, "darkblue");
@@ -333,9 +357,13 @@ export default function GameBoard() {
 
     const drawGame = (p5) => {
         drawBackground(p5);
+    
+        if (isPlaying) {
+            drawTimerBar(p5);  // <-- Ajoute la barre de temps ici
+        }
+    
         draw(p5);
     };
-    
 
     const draw = (p5) => {
         p5.mousePressed = () => {
@@ -372,7 +400,7 @@ export default function GameBoard() {
         if(isPlaying){
             p5.textAlign(p5.LEFT, p5.CENTER);
             p5.textSize(24);
-            p5.text(`Temps: ${timer}s`, 10, 30);
+            // p5.text(`Temps: ${timer}s`, 10, 30);
             players.forEach((p, index) => {
                 p5.fill(255);
                 p5.text(`${p.username}: ${p.score}`, 10, 60 + index * 30);
