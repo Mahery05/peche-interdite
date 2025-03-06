@@ -94,17 +94,33 @@ function handleSockets(io) {
     io.on("connection", (socket) => {
         socket.on("joinRoom", (roomId, username) => {
             if (!rooms[roomId]) createRoom(roomId);
-
+        
             const room = rooms[roomId];
+            
+            if (room.players.length >= 4) {
+                socket.emit("roomFull", "La partie est déjà pleine !");
+                return;
+            }
+        
             room.players.push({ id: socket.id, username, score: 0 });
             socket.join(roomId);
-
             io.to(roomId).emit("updatePlayers", room.players);
-
-            if (room.players.length >= 2 && !room.interval) {
-                startGame(io, roomId);
+        
+            if (room.players.length === 2 && !room.countdown) {
+                room.countdown = 10;
+        
+                const countdownInterval = setInterval(() => {
+                    room.countdown -= 1;
+                    io.to(roomId).emit("countdownUpdate", room.countdown);
+        
+                    if (room.countdown <= 0) {
+                        clearInterval(countdownInterval);
+                        delete room.countdown;
+                        startGame(io, roomId);
+                    }
+                }, 1000);
             }
-        });
+        });         
 
         socket.on("catchFish", (roomId, fishId) => {
             const room = rooms[roomId];

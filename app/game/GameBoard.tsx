@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -60,6 +64,17 @@ export default function GameBoard() {
     const [blurEffect, setBlurEffect] = useState(false);
     const [typingField, setTypingField] = useState<string | null>(null);
     const [waitingForPlayers, setWaitingForPlayers] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
+
+    useEffect(() => {
+        socket.on("countdownUpdate", (timeLeft) => {
+            setCountdown(timeLeft);
+        });
+    
+        return () => {
+            socket.off("countdownUpdate");
+        };
+    }, []);    
 
     useEffect(() => {
         const handleKeyPress = (event: KeyboardEvent) => {
@@ -276,7 +291,11 @@ export default function GameBoard() {
             p5.fill(255);
             p5.textSize(32);
             p5.textAlign(p5.CENTER, p5.CENTER);
-            p5.text("En attente de joueurs...", p5.width / 2, p5.height / 2);
+            if (countdown !== null) {
+                p5.text(`La partie commence dans ${countdown}s... (${players.length}/4)`, p5.width / 2, p5.height / 3 - 50);
+            } else {
+                p5.text(`En attente de joueurs... (${players.length}/4)`, p5.width / 2, p5.height / 3 - 50);
+            }            
             return; 
         }
 
