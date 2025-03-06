@@ -45,7 +45,7 @@ export default function GameBoard() {
         danger: { color: [255, 0, 0, 220], size: 160 }
     };    
     const [effectFrame, setEffectFrame] = useState(0);
-    const [scoreEffects, setScoreEffects] = useState<{ [key: string]: { value: number, color: number[], isNegative: boolean } }>({});
+    const [scoreEffects, setScoreEffects] = useState<{ [key: string]: { value: number, color: number[] } }>({});
     const [bubbles, setBubbles] = useState(
         Array.from({ length: 15 }, () => ({
             x: Math.random() * 800,
@@ -55,6 +55,42 @@ export default function GameBoard() {
         }))
     );
     const [captureLayer, setCaptureLayer] = useState<any>(null);
+    const [backgroundSound, setBackgroundSound] = useState<any>(null);
+    const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
+
+    useEffect(() => {
+        if (typeof window !== "undefined") { 
+            const newFishSounds = {
+                common: new Audio("/sounds/commun.mp3"),
+                rare: new Audio("/sounds/rare.mp3"),
+                epic: new Audio("/sounds/epic.mp3"),
+                danger: new Audio("/sounds/danger.mp3"),
+            };
+    
+            Object.values(newFishSounds).forEach(sound => {
+                sound.volume = 0.1;
+            });
+    
+            setFishSounds(newFishSounds);
+    
+            const oceanSound = new Audio("/sounds/water.mp3");
+            oceanSound.loop = true;
+            oceanSound.volume = 0.3;
+
+            const startSound = () => {
+                oceanSound.play().catch(err => console.warn("🔇 Audio bloqué :", err));
+                document.removeEventListener("click", startSound);
+                document.removeEventListener("keydown", startSound);
+            };
+
+            document.addEventListener("click", startSound);
+            document.addEventListener("keydown", startSound);
+
+            setBackgroundSound(oceanSound);
+        }
+    }, []);
+    
+
 
     useEffect(() => {
         socket.on("updatePlayers", (updatedPlayers) => {
@@ -111,6 +147,19 @@ export default function GameBoard() {
     const catchFish = (fishId: string) => {
         const selectedFish = fish.find(f => f.id === fishId) || null;
         if (!selectedFish) return;
+        if (selectedFish) {
+            const sound = fishSounds[selectedFish.type];
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(err => console.error("🎵 Erreur de lecture :", err));
+        
+                setTimeout(() => {
+                    sound.pause();
+                    sound.currentTime = 0;
+                }, 1500);
+            }
+        }        
+        
     
         setFish(prevFish => prevFish.filter(f => f.id !== fishId));
         socket.emit("catchFish", roomId, fishId);
@@ -153,7 +202,9 @@ export default function GameBoard() {
         const newLayer = p5.createGraphics(800, 600);
         setCaptureLayer(newLayer);
 
-        p5.createCanvas(800, 600).parent(canvasParentRef);
+        let canvas = p5.createCanvas(800, 600).parent(canvasParentRef);
+        canvas.style("display", "block");
+        canvas.style("margin", "auto");
         setP5Instance(p5);
     
         p5.loadImage("/images/fish.png", img => setAnonymousFishImage(img));
