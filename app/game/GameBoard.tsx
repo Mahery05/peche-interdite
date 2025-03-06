@@ -58,6 +58,24 @@ export default function GameBoard() {
     const [backgroundSound, setBackgroundSound] = useState<any>(null);
     const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
     const [blurEffect, setBlurEffect] = useState(false);
+    const [typingField, setTypingField] = useState<string | null>(null);
+
+    useEffect(() => {
+        const handleKeyPress = (event: KeyboardEvent) => {
+            if (!typingField) return;
+    
+            if (event.key === "Backspace") {
+                if (typingField === "room") setRoomId(prev => prev.slice(0, -1));
+                if (typingField === "pseudo") setUsername(prev => prev.slice(0, -1));
+            } else if (event.key.length === 1) {
+                if (typingField === "room") setRoomId(prev => prev + event.key);
+                if (typingField === "pseudo") setUsername(prev => prev + event.key);
+            }
+        };
+    
+        window.addEventListener("keydown", handleKeyPress);
+        return () => window.removeEventListener("keydown", handleKeyPress);
+    }, [typingField]);   
 
     useEffect(() => {
         if (typeof window !== "undefined") { 
@@ -217,19 +235,13 @@ export default function GameBoard() {
         p5.loadImage("/images/rare.png", img => setRareFishImage(img));
         p5.loadImage("/images/epic.png", img => setEpicFishImage(img));
         p5.loadImage("/images/danger.png", img => setDangerFishImage(img));
-    }; 
-    
 
-    const draw = (p5) => {
         p5.mousePressed = () => {
-            fish.forEach(f => {
-                const d = p5.dist(p5.mouseX, p5.mouseY, f.x, f.y);
-                if (d < 20) {
-                    catchFish(f.id, f.danger);
-                }
-            });
+            
         };
+    }; 
 
+    const drawBackground = (p5) => {
         let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
         gradient.addColorStop(1, "darkblue");
         gradient.addColorStop(0, "blue");
@@ -249,98 +261,146 @@ export default function GameBoard() {
             p5.noStroke();
             p5.ellipse(bubble.x, bubble.y, bubble.size, bubble.size);
         });
+
+        if (!isPlaying) {
+            p5.fill(255);
+            p5.textSize(32);
+            p5.textAlign(p5.CENTER, p5.CENTER);
+            p5.text("Rejoindre une Partie", p5.width / 2, p5.height / 3);
+
+            p5.textSize(20);
+            p5.textAlign(p5.LEFT, p5.CENTER);
+
+            p5.text("Room ID:", p5.width / 2 - 100, p5.height / 2 - 40);
+            p5.fill(200);
+            p5.rect(p5.width / 2 - 100, p5.height / 2 - 25, 200, 30, 5);
+            p5.fill(50);
+            p5.text(roomId, p5.width / 2 - 90, p5.height / 2 - 10);
+
+            p5.fill(255);
+            p5.text("Pseudo:", p5.width / 2 - 100, p5.height / 2 + 20);
+            p5.fill(200);
+            p5.rect(p5.width / 2 - 100, p5.height / 2 + 35, 200, 30, 5);
+            p5.fill(50);
+            p5.text(username, p5.width / 2 - 90, p5.height / 2 + 50);
+
+            p5.fill(0, 122, 255);
+            p5.rect(p5.width / 2 - 60, p5.height / 2 + 80, 120, 40, 10);
+            p5.fill(255);
+            p5.textSize(22);
+            p5.textAlign(p5.CENTER, p5.CENTER);
+            p5.text("Rejoindre", p5.width / 2, p5.height / 2 + 100);
+
+        }
+    };
+
+    const drawGame = (p5) => {
+        drawBackground(p5);
+        draw(p5);
+    };
+    
+
+    const draw = (p5) => {
+        p5.mousePressed = () => {
+            fish.forEach(f => {
+                const d = p5.dist(p5.mouseX, p5.mouseY, f.x, f.y);
+                if (d < 20) {
+                    catchFish(f.id, f.danger);
+                }
+            });
+
+            if (!isPlaying) {
+                if (p5.mouseX > p5.width / 2 - 100 && p5.mouseX < p5.width / 2 + 100) {
+                    if (p5.mouseY > p5.height / 2 - 25 && p5.mouseY < p5.height / 2 + 5) {
+                        setTypingField("room");
+                    }
+                    if (p5.mouseY > p5.height / 2 + 35 && p5.mouseY < p5.height / 2 + 65) {
+                        setTypingField("pseudo");
+                    }
+                }
+
+                if (
+                    p5.mouseX > p5.width / 2 - 60 &&
+                    p5.mouseX < p5.width / 2 + 60 &&
+                    p5.mouseY > p5.height / 2 + 80 &&
+                    p5.mouseY < p5.height / 2 + 120
+                ) {
+                    joinGame();
+                }
+            }
+        };
         
         //p5.background(0, 100, 255);
         p5.fill(255);
-        p5.textSize(24);
-        p5.text(`Temps: ${timer}s`, 10, 30);
+        if(isPlaying){
+            p5.textAlign(p5.LEFT, p5.CENTER);
+            p5.textSize(24);
+            p5.text(`Temps: ${timer}s`, 10, 30);
+            players.forEach((p, index) => {
+                p5.fill(255);
+                p5.text(`${p.username}: ${p.score}`, 10, 60 + index * 30);
+    
+                if (scoreEffects[p.id]) {
+                    const { value, color } = scoreEffects[p.id];
+                    p5.fill(...color);
+                    p5.text(`${value > 0 ? `+${value}` : value}`, 100, 60 + index * 30);
+                }            
+            });
 
-        players.forEach((p, index) => {
-            p5.fill(255);
-            p5.text(`${p.username}: ${p.score}`, 10, 60 + index * 30);
-
-            if (scoreEffects[p.id]) {
-                const { value, color } = scoreEffects[p.id];
-                p5.fill(...color);
-                p5.text(`${value > 0 ? `+${value}` : value}`, 100, 60 + index * 30);
-            }            
-        });
-
-        fish.forEach(f => {
-            if (!f.x || !f.y) return;
-        
-            f.x -= f.speed;
-            if (f.x < -40) f.x = p5.width;
-        
-            let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
-            let yPosition = f.y + floatOffset;
-        
-            let baseScale = f.size || 1;
-            let scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
-        
-            if (anonymousFishImage) {
-                p5.image(anonymousFishImage, f.x - 20 * scaleFactor, yPosition - 20 * scaleFactor, 70 * scaleFactor, 70 * scaleFactor);
-            } else {
-                p5.fill(100, 100, 100);
-                p5.ellipse(f.x, yPosition, 40 * scaleFactor, 40 * scaleFactor);
-            }
-        });
-        
-        
-        if (showEffect && caughtFish && captureLayer) {
-            captureLayer.clear();
-            captureLayer.imageMode(p5.CENTER);
-            let fishImage;
-            if (caughtFish.type === "common") fishImage = commonFishImage;
-            else if (caughtFish.type === "rare") fishImage = rareFishImage;
-            else if (caughtFish.type === "epic") fishImage = epicFishImage;
-            else if (caughtFish.type === "danger") fishImage = dangerFishImage;
-
-            if (fishImage) {
-                captureLayer.image(fishImage, captureLayer.width / 2, captureLayer.height / 2, 100, 100);
-        
-                const effect = fishEffects[caughtFish.type] || fishEffects.common;
-                let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
-                let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
-        
-                captureLayer.noFill();
-                captureLayer.stroke(...effect.color.slice(0, 3), alpha);
-                captureLayer.strokeWeight(caughtFish.type === "epic" ? 6 : 4);
-                captureLayer.ellipse(captureLayer.width / 2, captureLayer.height / 2, glowSize, glowSize);
-                setEffectFrame(effectFrame + 1);
-            }
-        
+            fish.forEach(f => {
+                if (!f.x || !f.y) return;
+            
+                f.x -= f.speed;
+                if (f.x < -40) f.x = p5.width;
+            
+                let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
+                let yPosition = f.y + floatOffset;
+            
+                let baseScale = f.size || 1;
+                let scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
+            
+                if (anonymousFishImage) {
+                    p5.image(anonymousFishImage, f.x - 20 * scaleFactor, yPosition - 20 * scaleFactor, 70 * scaleFactor, 70 * scaleFactor);
+                } else {
+                    p5.fill(100, 100, 100);
+                    p5.ellipse(f.x, yPosition, 40 * scaleFactor, 40 * scaleFactor);
+                }
+            });
+            
+            
+            if (showEffect && caughtFish && captureLayer) {
+                captureLayer.clear();
+                captureLayer.imageMode(p5.CENTER);
+                let fishImage;
+                if (caughtFish.type === "common") fishImage = commonFishImage;
+                else if (caughtFish.type === "rare") fishImage = rareFishImage;
+                else if (caughtFish.type === "epic") fishImage = epicFishImage;
+                else if (caughtFish.type === "danger") fishImage = dangerFishImage;
+    
+                if (fishImage) {
+                    captureLayer.image(fishImage, captureLayer.width / 2, captureLayer.height / 2, 100, 100);
+            
+                    const effect = fishEffects[caughtFish.type] || fishEffects.common;
+                    let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
+                    let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
+            
+                    captureLayer.noFill();
+                    captureLayer.stroke(...effect.color.slice(0, 3), alpha);
+                    captureLayer.strokeWeight(caughtFish.type === "epic" ? 6 : 4);
+                    captureLayer.ellipse(captureLayer.width / 2, captureLayer.height / 2, glowSize, glowSize);
+                    setEffectFrame(effectFrame + 1);
+                }   
             p5.image(captureLayer, 0, 0);
+        }
         }
 
     };
 
     return (
-        <div className={`h-screen flex items-center justify-center bg-blue-500 text-white ${blurEffect ? "blur-effect" : ""}`}>
-            {!isPlaying ? (
-                <div className="p-6 bg-white text-black rounded-lg shadow-xl flex flex-col items-center">
-                    <h1 className="text-3xl font-bold mb-4">Rejoindre une Partie</h1>
-                    <input 
-                        type="text" 
-                        placeholder="Room ID" 
-                        value={roomId} 
-                        onChange={(e) => setRoomId(e.target.value)} 
-                        className="border p-2 mb-2 w-full rounded" 
-                    />
-                    <input 
-                        type="text" 
-                        placeholder="Pseudo" 
-                        value={username} 
-                        onChange={(e) => setUsername(e.target.value)} 
-                        className="border p-2 mb-4 w-full rounded" 
-                    />
-                    <button onClick={joinGame} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                        Rejoindre
-                    </button>
-                </div>
-            ) : (
-                <Sketch setup={setup} draw={draw} />
-            )}
+        <div className={`relative h-screen w-screen flex items-center justify-center overflow-hidden ${blurEffect ? "blur-effect" : ""}`}>
+            <div className="absolute inset-0">
+                <Sketch setup={setup} draw={drawGame} />
+            </div>
         </div>
-    );
+    );    
 }
