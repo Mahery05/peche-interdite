@@ -61,7 +61,6 @@ export default function GameBoard() {
     const [typingField, setTypingField] = useState<string | null>(null);
     const [isGameOver, setIsGameOver] = useState(false);
 
-
     useEffect(() => {
         const handleKeyPress = (event: KeyboardEvent) => {
             if (!typingField) return;
@@ -134,11 +133,10 @@ export default function GameBoard() {
 
         socket.on("endGame", ({ players }) => {
             setIsPlaying(false);
-            setIsGameOver(true);  // Active l'écran de Game Over
-            setPlayers(players);  // Mets à jour les scores finaux
+            setIsGameOver(true); // On affiche l'écran de Game Over
+            setPlayers(players); // On stocke les scores finaux
         });
         
-
         return () => {
             socket.off("updatePlayers");
             socket.off("startGame");
@@ -240,31 +238,7 @@ export default function GameBoard() {
         p5.mousePressed = () => {
             
         };
-    };
-    
-    const drawGameOver = (p5) => {
-        p5.fill(0, 0, 0, 150);
-        p5.rect(0, 0, p5.width, p5.height);
-    
-        p5.fill(255);
-        p5.textSize(48);
-        p5.textAlign(p5.CENTER, p5.CENTER);
-        p5.text("Game Over", p5.width / 2, p5.height / 3);
-    
-        p5.textSize(24);
-        p5.text("Scores finaux :", p5.width / 2, p5.height / 2 - 20);
-    
-        players.forEach((p, index) => {
-            p5.text(`${p.username}: ${p.score}`, p5.width / 2, p5.height / 2 + 30 + index * 30);
-        });
-    
-        p5.fill(0, 122, 255);
-        p5.rect(p5.width / 2 - 60, p5.height / 2 + 120, 120, 40, 10);
-        p5.fill(255);
-        p5.textSize(22);
-        p5.text("Rejouer", p5.width / 2, p5.height / 2 + 140);
-    };
-    
+    }; 
 
     const drawBackground = (p5) => {
         const gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
@@ -319,6 +293,31 @@ export default function GameBoard() {
         }
     };
 
+    const drawGameOver = (p5) => {
+        p5.fill(0, 0, 0, 180);  // Fond semi-transparent
+        p5.rect(0, 0, p5.width, p5.height);
+    
+        p5.fill(255);
+        p5.textSize(48);
+        p5.textAlign(p5.CENTER, p5.CENTER);
+        p5.text("Game Over", p5.width / 2, p5.height / 3);
+    
+        p5.textSize(24);
+        p5.text("Scores finaux :", p5.width / 2, p5.height / 2 - 20);
+    
+        players.forEach((p, index) => {
+            p5.text(`${p.username}: ${p.score}`, p5.width / 2, p5.height / 2 + 30 + index * 30);
+        });
+    
+        // Bouton Rejouer
+        p5.fill(0, 122, 255);
+        p5.rect(p5.width / 2 - 60, p5.height / 2 + 120, 120, 40, 10);
+        p5.fill(255);
+        p5.textSize(22);
+        p5.text("Rejouer", p5.width / 2, p5.height / 2 + 140);
+    };
+    
+
     const drawGame = (p5) => {
         drawBackground(p5);
     
@@ -327,7 +326,7 @@ export default function GameBoard() {
             return;
         }
     
-        draw(p5);  // continue le dessin normal si la partie n'est pas finie
+        draw(p5);
     };
     
     
@@ -368,9 +367,10 @@ export default function GameBoard() {
                     p5.mouseY > p5.height / 2 + 120 &&
                     p5.mouseY < p5.height / 2 + 160
                 ) {
-                    setIsGameOver(false);  // Enlève l'écran de game over
-                    setIsPlaying(false);   // Retour à l'écran d'accueil
-                    setPlayers([]);        // Reset des scores (optionnel)
+                    // Reset des états pour revenir à l'écran d'accueil
+                    setIsGameOver(false);
+                    setIsPlaying(false);
+                    setPlayers([]);
                 }
             }
             
