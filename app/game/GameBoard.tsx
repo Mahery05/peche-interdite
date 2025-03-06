@@ -57,6 +57,9 @@ export default function GameBoard() {
     const [captureLayer, setCaptureLayer] = useState<any>(null);
     const [backgroundSound, setBackgroundSound] = useState<any>(null);
     const [fishSounds, setFishSounds] = useState<{ [key: string]: HTMLAudioElement }>({});
+    const [gameOver, setGameOver] = useState(false);
+    const [finalScores, setFinalScores] = useState<Player[]>([]);
+
 
     useEffect(() => {
         if (typeof window !== "undefined") { 
@@ -112,12 +115,11 @@ export default function GameBoard() {
         });
 
         socket.on("endGame", ({ players }) => {
-            setIsPlaying(false);
-            alert(
-                "Fin de la partie! Scores: " +
-                players.map((p: Player) => `${p.username}: ${p.score}`).join(", ")
-            );
+            setIsPlaying(false);          // On arrête le jeu
+            setGameOver(true);             // On passe en mode "fin de partie"
+            setFinalScores(players);       // On stocke les scores finaux
         });
+        
 
         return () => {
             socket.off("updatePlayers");
@@ -202,7 +204,7 @@ export default function GameBoard() {
         const newLayer = p5.createGraphics(800, 600);
         setCaptureLayer(newLayer);
 
-        let canvas = p5.createCanvas(800, 600).parent(canvasParentRef);
+        const canvas = p5.createCanvas(800, 600).parent(canvasParentRef);
         canvas.style("display", "block");
         canvas.style("margin", "auto");
         setP5Instance(p5);
@@ -212,6 +214,13 @@ export default function GameBoard() {
         p5.loadImage("/images/rare.png", img => setRareFishImage(img));
         p5.loadImage("/images/epic.png", img => setEpicFishImage(img));
         p5.loadImage("/images/danger.png", img => setDangerFishImage(img));
+        p5.keyPressed = () => {
+            if (gameOver && p5.key === ' ') {
+                setGameOver(false);
+                setFinalScores([]);
+            }
+        };
+        
     }; 
     
 
@@ -225,7 +234,7 @@ export default function GameBoard() {
             });
         };
 
-        let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
+        const gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
         gradient.addColorStop(1, "darkblue");
         gradient.addColorStop(0, "blue");
 
@@ -267,11 +276,11 @@ export default function GameBoard() {
             f.x -= f.speed;
             if (f.x < -40) f.x = p5.width;
         
-            let floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
-            let yPosition = f.y + floatOffset;
+            const floatOffset = Math.sin(p5.frameCount * 0.05 + f.x * 0.01) * 5;
+            const yPosition = f.y + floatOffset;
         
-            let baseScale = f.size || 1;
-            let scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
+            const baseScale = f.size || 1;
+            const scaleFactor = baseScale + Math.sin(p5.frameCount * 0.02 + f.x * 0.01) * 0.05;
         
             if (anonymousFishImage) {
                 p5.image(anonymousFishImage, f.x - 20 * scaleFactor, yPosition - 20 * scaleFactor, 70 * scaleFactor, 70 * scaleFactor);
@@ -295,8 +304,8 @@ export default function GameBoard() {
                 captureLayer.image(fishImage, captureLayer.width / 2, captureLayer.height / 2, 100, 100);
         
                 const effect = fishEffects[caughtFish.type] || fishEffects.common;
-                let glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
-                let alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
+                const glowSize = effect.size + Math.sin(effectFrame * 0.1) * 10;
+                const alpha = 150 + Math.sin(effectFrame * 0.1) * 50;
         
                 captureLayer.noFill();
                 captureLayer.stroke(...effect.color.slice(0, 3), alpha);
@@ -308,6 +317,40 @@ export default function GameBoard() {
             p5.image(captureLayer, 0, 0);
         }
 
+        if (gameOver) {
+            p5.fill(0, 0, 0, 200); // Fond sombre semi-transparent
+            p5.rect(0, 0, p5.width, p5.height);
+        
+            p5.fill(255);
+            p5.textSize(32);
+            p5.textAlign(p5.CENTER, p5.CENTER);
+            p5.text("Fin de la Partie", p5.width / 2, 100);
+        
+            p5.textSize(24);
+            p5.text("Classement :", p5.width / 2, 150);
+        
+            console.log("Final Scores Affichés:", finalScores);
+        
+            if (finalScores.length === 0) {
+                p5.text("Aucun score disponible", p5.width / 2, 200);
+            } else {
+                finalScores
+                    .sort((a, b) => b.score - a.score)
+                    .forEach((player, index) => {
+                        p5.text(
+                            `${index + 1}. ${player.username} - ${player.score} points`,
+                            p5.width / 2,
+                            200 + index * 30
+                        );
+                    });
+            }
+        
+            p5.textSize(20);
+            p5.text("Appuyez sur ESPACE pour revenir à l'accueil", p5.width / 2, p5.height - 50);
+        
+            return;  // On bloque le reste de l'affichage (poissons, etc.)
+        }
+        
     };
 
     return (
