@@ -66,6 +66,7 @@ export default function GameBoard() {
     const [waitingForPlayers, setWaitingForPlayers] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [gameStartedError, setGameStartedError] = useState(false);
+    const [isGameOver, setIsGameOver] = useState(false);
 
     useEffect(() => {
         socket.on("gameAlreadyStarted", () => {
@@ -161,10 +162,8 @@ export default function GameBoard() {
 
         socket.on("endGame", ({ players }) => {
             setIsPlaying(false);
-            alert(
-                "Fin de la partie! Scores: " +
-                players.map((p: Player) => `${p.username}: ${p.score}`).join(", ")
-            );
+            setIsGameOver(true);
+            setPlayers(players);
             setWaitingForPlayers(false);
         });
 
@@ -309,6 +308,26 @@ const drawTimerBar = (p5) => {
     p5.text(`${timer}s`, 10 + barWidth / 2, 10 + barHeight / 2);
 };
 
+const drawGameOver = (p5) => {
+    p5.fill(255);
+    p5.textSize(32);
+    p5.textAlign(p5.CENTER, p5.CENTER);
+    p5.text("Fin de la partie !", p5.width / 2, p5.height / 2 - 100);
+
+    p5.textSize(24);
+    p5.text("Scores finaux :", p5.width / 2, p5.height / 2 - 60);
+
+    players.forEach((p, index) => {
+        p5.text(`${p.username}: ${p.score}`, p5.width / 2, p5.height / 2 - 30 + index * 30);
+    });
+
+    p5.fill(0, 122, 255);
+    p5.rect(p5.width / 2 - 60, p5.height / 2 + 100, 120, 40, 10);
+    p5.fill(255);
+    p5.textSize(22);
+    p5.text("Rejouer", p5.width / 2, p5.height / 2 + 120);
+};
+
     const drawBackground = (p5) => {
         let gradient = p5.drawingContext.createLinearGradient(0, 0, 0, p5.height);
         gradient.addColorStop(1, "darkblue");
@@ -340,6 +359,11 @@ const drawTimerBar = (p5) => {
                 p5.text(`En attente de joueurs... (${players.length}/4)`, p5.width / 2, p5.height / 3 - 50);
             }            
             return; 
+        }
+
+        if (isGameOver) {
+            drawGameOver(p5);
+            return;
         }
 
         if (!isPlaying) {
@@ -384,6 +408,18 @@ const drawTimerBar = (p5) => {
         draw(p5);
     };
 
+    const resetGame = () => {
+        setIsGameOver(false);
+        setIsPlaying(false);
+        setPlayers([]);
+        setFish([]);
+        setTimer(120);
+        setShowEffect(false);
+        setCaughtFish(null);
+        setWaitingForPlayers(false);
+        setCountdown(null);
+    };
+
     const draw = (p5) => {
         p5.mousePressed = () => {
             fish.forEach(f => {
@@ -412,6 +448,19 @@ const drawTimerBar = (p5) => {
                     joinGame();
                 }
             }
+
+            if (isGameOver) {
+                if (
+                    p5.mouseX > p5.width / 2 - 60 &&
+                    p5.mouseX < p5.width / 2 + 60 &&
+                    p5.mouseY > p5.height / 2 + 100 &&
+                    p5.mouseY < p5.height / 2 + 140
+                ) {
+                    resetGame();
+                }
+                return; // Pour éviter d'interagir avec d'autres éléments
+            }
+
         };
         
         //p5.background(0, 100, 255);
