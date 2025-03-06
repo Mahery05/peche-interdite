@@ -16,7 +16,7 @@ function generateFish() {
         { type: "common", points: 1, name: "Poisson Commun", probability: 0.6 },
         { type: "rare", points: 2, name: "Poisson Rare", probability: 0.25 }, 
         { type: "epic", points: 4, name: "Poisson Épique", probability: 0.10, randomWalk: true },
-        { type: "danger", points: -2, name: "Poisson Dangereux", probability: 0.25 } 
+        { type: "danger", points: -2, name: "Poisson Dangereux", probability: 0.4 } 
     ];
 
     let rand = Math.random();
