@@ -29,9 +29,9 @@ body {
 }
 
 canvas {
-  border-radius: 15px;  /* ✅ Coins arrondis */
+  border-radius: 15px;  
   box-shadow: 0px 0px 15px rgba(0, 150, 255, 0.7); 
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(0, 150, 255, 0.3);
 }
 
 @keyframes glow {
@@ -44,6 +44,11 @@ canvas {
   animation: glow 3s infinite alternate ease-in-out;
 }
 
+.blur-effect {
+  filter: blur(10px);
+  transition: filter 1s ease-in-out;
+  cursor:none;
+}
 
 * {
   box-sizing: border-box;
