@@ -343,12 +343,12 @@ const drawGameOver = (p5) => {
             return; 
         }
 
+
         if (isGameOver) {
             drawGameOver(p5);
             return;
         }
         
-
         if (!isPlaying) {
             p5.fill(255);
             p5.textSize(32);
@@ -403,7 +403,6 @@ const drawGameOver = (p5) => {
         setCountdown(null);
     };
     
-
     const draw = (p5) => {
         p5.mousePressed = () => {
             fish.forEach(f => {
@@ -444,7 +443,6 @@ const drawGameOver = (p5) => {
                 }
                 return; // Pour éviter d'interagir avec d'autres éléments
             }
-            
         };
         
         //p5.background(0, 100, 255);
