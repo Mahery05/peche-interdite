@@ -92,10 +92,16 @@ function endGame(io, roomId) {
 
 function handleSockets(io) {
     io.on("connection", (socket) => {
-        socket.on("joinRoom", (roomId, username) => {
+        socket.on("joinRoom", (roomId, username, callback) => {
             if (!rooms[roomId]) createRoom(roomId);
         
             const room = rooms[roomId];
+
+            if (room.timer < 60 && room.players.length >= 2) {
+                socket.emit("gameAlreadyStarted");
+                callback({ success: false });
+                return;
+            }
             
             if (room.players.length >= 4) {
                 socket.emit("roomFull", "La partie est déjà pleine !");
@@ -120,6 +126,7 @@ function handleSockets(io) {
                     }
                 }, 1000);
             }
+            callback({ success: true });
         });         
 
         socket.on("catchFish", (roomId, fishId) => {

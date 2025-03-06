@@ -65,6 +65,19 @@ export default function GameBoard() {
     const [typingField, setTypingField] = useState<string | null>(null);
     const [waitingForPlayers, setWaitingForPlayers] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
+    const [gameStartedError, setGameStartedError] = useState(false);
+
+    useEffect(() => {
+        socket.on("gameAlreadyStarted", () => {
+            setGameStartedError(true);
+            setTimeout(() => setGameStartedError(false), 3000);
+        });
+
+        return () => {
+            socket.off("gameAlreadyStarted");
+        };
+    }, []);
+
 
     useEffect(() => {
         socket.on("countdownUpdate", (timeLeft) => {
@@ -183,10 +196,16 @@ export default function GameBoard() {
 
     const joinGame = () => {
         if (username) {
-            socket.emit("joinRoom", roomId, username);
-            setWaitingForPlayers(true);
+            socket.emit("joinRoom", roomId, username, (response: { success: boolean }) => {
+                if (response.success) {
+                    setWaitingForPlayers(true);
+                } else {
+                    setGameStartedError(true); 
+                    setTimeout(() => setGameStartedError(false), 3000);
+                }
+            });
         }
-    };
+    };    
 
     const catchFish = (fishId: string) => {
         const selectedFish = fish.find(f => f.id === fishId) || null;
@@ -359,7 +378,7 @@ const drawTimerBar = (p5) => {
         drawBackground(p5);
     
         if (isPlaying) {
-            drawTimerBar(p5);  // <-- Ajoute la barre de temps ici
+            drawTimerBar(p5);
         }
     
         draw(p5);
@@ -484,6 +503,11 @@ const drawTimerBar = (p5) => {
     return (
         <div className={`relative h-screen w-screen flex items-center justify-center overflow-hidden ${blurEffect ? "blur-effect" : ""}`}>
             <div className="absolute inset-0">
+                {gameStartedError && (
+                    <div className="absolute top-10 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                        🚫 Partie déjà en cours ! Reviens plus tard.
+                    </div>
+                )}
                 <Sketch setup={setup} draw={drawGame} />
             </div>
         </div>
