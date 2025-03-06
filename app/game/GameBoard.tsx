@@ -346,7 +346,7 @@ const drawTimerBar = (p5) => {
             p5.fill(255);
             p5.textSize(32);
             p5.textAlign(p5.CENTER, p5.CENTER);
-            p5.text("Rejoindre une Partie", p5.width / 2, p5.height / 3);
+            p5.text("La Pêche Interdite", p5.width / 2, p5.height / 3);
 
             p5.textSize(20);
             p5.textAlign(p5.LEFT, p5.CENTER);

@@ -65,8 +65,8 @@ function startGame(io, roomId) {
         if (room.timer <= 0) {
             endGame(io, roomId);
         } else {
-            if (room.timer % 1.5 === 0) {
-                const numberOfFish = Math.floor(Math.random() * 3) + 1;
+            if (room.timer % 1 === 0) {
+                const numberOfFish = Math.floor(Math.random() * 5) + 1;
                 const newFish = Array.from({ length: numberOfFish }, () => generateFish());
                 room.fish.push(...newFish); 
 
